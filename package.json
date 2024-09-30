@@ -1,0 +1,26 @@
+{
+  "name": "my---lestari",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build"
+  },
+  "dependencies": {
+    "apexcharts": "^3.52.0",
+    "core-js": "^3.8.3",
+    "crypto-js": "^4.2.0",
+    "vue": "^3.2.13",
+    "vue-apexcharts": "^1.6.2",
+    "vue-content-loader": "^2.0.1",
+    "vue-router": "^4.0.3",
+    "vue2-transitions": "^0.3.0",
+    "vue3-apexcharts": "^1.5.3"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "@vue/cli-plugin-babel": "~5.0.0",
+    "@vue/cli-plugin-router": "~5.0.0",
+    "@vue/cli-service": "~5.0.0"
+  }
+}
