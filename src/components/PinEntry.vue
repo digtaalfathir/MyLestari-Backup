@@ -11,12 +11,25 @@
       </div>
       <h2 class="title">Enter PIN</h2>
       <p class="description">Please enter your 6-digit PIN to continue</p>
-      <input v-model="pin" type="password" class="pin-input" maxlength="6" placeholder="Enter PIN" />
+
+      <div class="pin-input-container">
+        <input v-model="pin" :type="isPasswordVisible ? 'text' : 'password'" class="pin-input" maxlength="6" placeholder="Enter PIN" @input="validatePin" />
+        <button @click="togglePasswordVisibility" class="toggle-visibility-btn">
+          <svg v-if="!isPasswordVisible" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="eye-icon">
+            <path d="M12 5C7.58 5 3.76 7.61 2 12c1.76 4.39 5.58 7 10 7s8.24-2.61 10-7c-1.76-4.39-5.58-7-10-7zm0 12c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 0 0 0 6 3 3 0 0 0 0-6z" />
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="eye-icon">
+            <path d="M12 5C7.58 5 3.76 7.61 2 12c1.76 4.39 5.58 7 10 7s8.24-2.61 10-7c-1.76-4.39-5.58-7-10-7zm0 12c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm6-5c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" />
+          </svg>
+        </button>
+      </div>
+
+      <p v-if="error" class="error-msg">{{ error }}</p>
+
       <div class="button-container">
         <button @click="goBack" class="back-btn">Back</button>
         <button @click="submitPin" class="submit-btn">Submit</button>
       </div>
-      <p v-if="error" class="error-msg">{{ error }}</p>
     </div>
   </div>
 </template>
@@ -27,9 +40,23 @@ export default {
     return {
       pin: "",
       error: "",
+      isPasswordVisible: false,
     };
   },
   methods: {
+    validatePin() {
+      const sanitizedInput = this.pin.replace(/[^0-9]/g, "");
+
+      if (this.pin !== sanitizedInput) {
+        this.error = "The input can only be numbers";
+        this.pin = sanitizedInput;
+      } else {
+        this.error = "";
+      }
+    },
+    togglePasswordVisibility() {
+      this.isPasswordVisible = !this.isPasswordVisible;
+    },
     submitPin() {
       const routeType = this.$route.query.type;
       let correctPin = "";
@@ -42,10 +69,8 @@ export default {
         correctPin = "007300";
       }
 
-      // Validasi PIN yang dimasukkan
       if (this.pin === correctPin) {
         const validUntil = new Date().getTime() + 15 * 60 * 1000; // Valid for 15 minutes
-
         if (routeType === "glasshouse") {
           localStorage.setItem("pinValidUntilGlasshouse", validUntil);
         } else if (routeType === "greenhouse") {
@@ -55,7 +80,6 @@ export default {
         }
 
         const redirectPath = this.$route.query.redirect || "/";
-
         this.$router.replace({ path: redirectPath });
       } else {
         this.error = "Invalid PIN. Please try again.";
@@ -127,11 +151,39 @@ export default {
   margin-bottom: 20px;
   text-align: center;
   transition: border-color 0.3s ease;
+  flex: 1;
+  padding-right: 40px;
+  height: 40px;
+  font-size: 16px;
 }
 
 .pin-input:focus {
   border-color: #007bff;
   outline: none;
+}
+
+.pin-input-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.toggle-visibility-btn {
+  position: absolute;
+  right: 10px;
+  top: 35%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.eye-icon {
+  width: 24px;
+  height: 24px;
+  fill: #a2a5a8;
 }
 
 .button-container {
@@ -171,7 +223,8 @@ export default {
 
 .error-msg {
   color: red;
-  margin-top: 15px;
+  margin-top: -20px;
+  margin-bottom: 10px;
   font-size: 14px;
 }
 
