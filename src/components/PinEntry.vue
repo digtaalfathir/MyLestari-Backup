@@ -35,6 +35,8 @@
 </template>
 
 <script>
+import CryptoJS from "crypto-js";
+
 export default {
   data() {
     return {
@@ -57,19 +59,23 @@ export default {
     togglePasswordVisibility() {
       this.isPasswordVisible = !this.isPasswordVisible;
     },
+    getMD5HashFromDate(date) {
+      return CryptoJS.MD5(date).toString();
+    },
     submitPin() {
       const routeType = this.$route.query.type;
       let correctPin = "";
 
       if (routeType === "glasshouse") {
-        correctPin = "000000";
+        correctPin = "670b14728ad9902aecba32e22fa4f6bd";
       } else if (routeType === "greenhouse") {
-        correctPin = "000000";
+        correctPin = "670b14728ad9902aecba32e22fa4f6bd";
       } else if (routeType === "faperta") {
-        correctPin = "007300";
+        correctPin = "222ae074b25e226f3bbc78acba7e34c2";
       }
 
-      if (this.pin === correctPin) {
+      const hashpin = this.getMD5HashFromDate(this.pin);
+      if (hashpin === correctPin) {
         const validUntil = new Date().getTime() + 15 * 60 * 1000; // Valid for 15 minutes
         if (routeType === "glasshouse") {
           localStorage.setItem("pinValidUntilGlasshouse", validUntil);
