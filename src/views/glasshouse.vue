@@ -345,12 +345,13 @@ export default {
 
         let nowUpdate;
         if (custom) {
-          nowUpdate = new Date(customDate.value); // Jika custom = true, gunakan customDate
+          nowUpdate = new Date(customDate.value);
         } else {
-          nowUpdate = new Date(); // Jika custom = false, gunakan waktu saat ini
+          nowUpdate = new Date();
         }
         const nowplus7 = new Date(nowUpdate.getTime() + 7 * 60 * 60 * 1000);
         nowplus7.setSeconds(0, 0);
+        const nowplus7fit = new Date(nowplus7.getTime() - 2 * 60 * 1000);
 
         // Define past time intervals
         const oneHourAgo = new Date(nowplus7);
@@ -371,24 +372,23 @@ export default {
         const oneMonthAgo = new Date(nowplus7);
         oneMonthAgo.setMonth(nowplus7.getMonth() - 1);
 
-        // Add sample points for different time intervals
         if (date === "1h") {
-          val[6].data.push({ x: nowplus7, y: parseFloat("") });
+          val[6].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[6].data.push({ x: oneHourAgo, y: parseFloat("") });
         } else if (date === "3h") {
-          val[6].data.push({ x: nowplus7, y: parseFloat("") });
+          val[6].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[6].data.push({ x: threeHoursAgo, y: parseFloat("") });
         } else if (date === "12h") {
-          val[6].data.push({ x: nowplus7, y: parseFloat("") });
+          val[6].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[6].data.push({ x: twelveHoursAgo, y: parseFloat("") });
         } else if (date === "1d") {
-          val[6].data.push({ x: nowplus7, y: parseFloat("") });
+          val[6].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[6].data.push({ x: yesterday, y: parseFloat("") });
         } else if (date === "1w") {
-          val[6].data.push({ x: nowplus7, y: parseFloat("") });
+          val[6].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[6].data.push({ x: oneWeekAgo, y: parseFloat("") });
         } else if (date === "1m") {
-          val[6].data.push({ x: nowplus7, y: parseFloat("") });
+          val[6].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[6].data.push({ x: oneMonthAgo, y: parseFloat("") });
         }
 
@@ -530,12 +530,12 @@ export default {
           throw new Error("Network response was not ok");
         }
         const data = await response.json();
-        const percentValueTemp = parseInt(data.advice.tempTol);
-        const percentValueHum = parseInt(data.advice.humTol);
-        templimitup = parseInt(data.advice.tempTh) + percentValueTemp;
-        templimitdown = parseInt(data.advice.tempTh) - percentValueTemp;
-        humlimitup = parseInt(data.advice.humTh) + percentValueHum;
-        humlimitdown = parseInt(data.advice.humTh) - percentValueHum;
+        const percentValueTemp = parseFloat(data.advice.tempTol);
+        const percentValueHum = parseFloat(data.advice.humTol);
+        templimitup = parseFloat(data.advice.tempTh) + percentValueTemp;
+        templimitdown = parseFloat(data.advice.tempTh) - percentValueTemp;
+        humlimitup = parseFloat(data.advice.humTh) + percentValueHum;
+        humlimitdown = parseFloat(data.advice.humTh) - percentValueHum;
       } catch (error) {
         if (retries > 0) {
           notification.value = {
@@ -826,9 +826,11 @@ export default {
         "1w": { K1: [], T1: [], K2: [], T2: [], K3: [], T3: [] },
         "1m": { K1: [], T1: [], K2: [], T2: [], K3: [], T3: [] },
       };
-      getDataSummary("1h");
+      updateUrl();
       p.value = 0;
       x.value = "1h";
+      customDateActive.value = false;
+      getDataSummary("1h");
     }
     async function onSyncCustom(value1, useCustom = false) {
       iscontentLoad.value = true;

@@ -89,7 +89,7 @@
                   <div v-for="ec in 1" :key="'ec' + ec" class="bg-form-group border border-gray-300 rounded-lg p-4">
                     <div class="flex justify-between items-center">
                       <p :class="{ 'font-semibold leading-8': isMobile, 'text-base font-semibold leading-8': !isMobile }" class="relative text-sm">
-                        EC Pump
+                        AB Mix Pump
                         <span
                           :class="{
                             display: isMobile ? 'block' : 'inline',
@@ -98,7 +98,6 @@
                           }"
                           class="arrow-size"
                         >
-                          ▲
                         </span>
                       </p>
                       <div class="relative inline-block">
@@ -232,7 +231,7 @@
                         Treshold
                       </p>
                       <input type="number" placeholder="00.0" :class="zt2.modelClass" id="ecthInput" />
-                      <span class="unit-labelx">μS</span>
+                      <span class="unit-labelx">ppm</span>
                     </div>
                     <div class="input-containerx">
                       <p
@@ -245,7 +244,7 @@
                         Tolerance
                       </p>
                       <input type="number" placeholder="00.0" :class="zt2.modelClass" id="ecToleInput" />
-                      <span class="unit-labelx">μS</span>
+                      <span class="unit-labelx">ppm</span>
                     </div>
                   </div>
                 </li>
@@ -321,7 +320,7 @@
                         }"
                         class="relative text-sm font-semibold leading-8"
                       >
-                        Jet Pump
+                        Plant Pump (Pompa Tanaman)
                       </p>
                       <div class="relative inline-block">
                         <label :for="'jetpump' + jetpump + '-switch'" class="flex items-center cursor-pointer">
@@ -350,7 +349,7 @@
                         }"
                         class="relative text-sm font-semibold leading-8"
                       >
-                        Booster Pump
+                        Tap Water Pump (Pompa Air Baku)
                       </p>
                       <div class="relative inline-block">
                         <label :for="'boostpump' + boostpump + '-switch'" class="flex items-center cursor-pointer">

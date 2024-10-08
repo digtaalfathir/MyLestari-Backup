@@ -28,12 +28,20 @@
         <h3 class="text-left"><strong>Environment</strong></h3>
         <p class="ml-2 text-gray-500 text-sm">Last Update: {{ lastUpdate }}</p>
       </div>
-      <ul class="mt-4 mb-5 flex flex-wrap gap-4 justify-start list-none bg-white" data-tabs-toggle="#tab-content" role="tablist">
-        <li v-for="(item, index) in environtment" :key="index" class="relative w-60 gap-3 sm:w-48 py-2 px-3 bg-gray-50 border border-gray-300 rounded min-h-16" role="presentation">
-          <p class="text-xs mb-1">{{ item.name }}</p>
-          <h5 :class="[item.isGreaterThan ? 'text-green-500' : 'text-red-500']" class="text-sm font-medium">
-            {{ item.value }} <sup class="satuan-label">{{ item.satuan }}</sup>
-          </h5>
+      <ul :class="[isMobile ? 'gap-2' : 'gap-4']" class="mt-4 mb-5 flex justify-start list-none bg-white" data-tabs-toggle="#tab-content" role="tablist">
+        <li v-for="(item, index) in environtment" :key="index" class="relative w-60 sm:w-48 gap-3 py-2 px-3 bg-gray-50 border border-gray-300 rounded min-h-16" role="presentation">
+          <template v-if="index < 3">
+            <p class="text-xs text-gray-500 mb-1">{{ item.name }}</p>
+            <h5 :class="[item.isGreaterThan ? 'text-green-500' : 'text-red-500']" class="text-sm font-medium">
+              {{ item.value }} <sup class="satuan-label">{{ item.satuan }}</sup>
+            </h5>
+          </template>
+          <template v-else>
+            <p class="text-xs text-gray-500 mb-1">{{ item.name }}</p>
+            <h5 class="text-gray-900 text-sm font-medium">
+              {{ item.value }} <sup class="satuan-label">{{ item.satuan }}</sup>
+            </h5>
+          </template>
         </li>
       </ul>
     </div>
@@ -125,8 +133,8 @@
                   <span
                     :class="{
                       'text-sm ml-4': isMobile,
-                      'ml-8': item.name === 'WL_Mid',
-                      'ml-16': item.name === 'WL_High',
+                      'ml-8': item.name === 'RH',
+                      'ml-16': item.name === 'CO2',
                     }"
                     v-if="isMobile"
                   >
@@ -152,12 +160,12 @@
                   <span v-if="isMobile" class="text-sm">{{ item.value }}</span>
                   <span v-if="!isMobile">{{ item.value }}</span>
                 </div>
-                <div v-if="isMobile" class="font-semibold text-gray-700 text-sm ml-8">{{ item.wl_low }}</div>
-                <div v-if="!isMobile" class="font-semibold text-gray-700 ml-2">{{ item.wl_low }}</div>
-                <div v-if="isMobile" class="font-semibold text-gray-700 text-sm ml-16">{{ item.wl_mid }}</div>
-                <div v-if="!isMobile" class="font-semibold text-gray-700 ml-2">{{ item.wl_mid }}</div>
-                <div v-if="isMobile" class="font-semibold text-gray-700 text-sm ml-20">{{ item.wl_hig }}</div>
-                <div v-if="!isMobile" class="font-semibold text-gray-700 ml-2">{{ item.wl_hig }}</div>
+                <div v-if="isMobile" class="font-semibold text-gray-700 text-sm ml-8">{{ item.temp }}</div>
+                <div v-if="!isMobile" class="font-semibold text-gray-700 ml-2">{{ item.temp }}</div>
+                <div v-if="isMobile" class="font-semibold text-gray-700 text-sm ml-16">{{ item.hum }}</div>
+                <div v-if="!isMobile" class="font-semibold text-gray-700">{{ item.hum }}</div>
+                <div v-if="isMobile" class="font-semibold text-gray-700 text-sm ml-20">{{ item.co2 }}</div>
+                <div v-if="!isMobile" class="font-semibold text-gray-700">{{ item.co2 }}</div>
               </div>
             </li>
           </ul>
@@ -171,7 +179,7 @@
 import ApexChart from "vue3-apexcharts";
 import MenuList from "@/components/MenuList.vue";
 import { ContentLoader } from "vue-content-loader";
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, watch, computed, onMounted, onUnmounted } from "vue";
 import ContentLoaderComponent from "@/components/ContentLoaderComponent.vue";
 
 export default {
@@ -184,12 +192,11 @@ export default {
   },
 
   setup() {
-    const url1 = "https://inamas.id/dev/isolated/faperta/?sensor",
-      url2 = "https://inamas.id/dev/petro/glasshouse/?setpoint",
+    const url1 = "https://inamas.id/dev/faperta/?sensor",
       modelOptions = ref([{ id: 1, name: "Environment" }]),
       isLoading = ref(false),
       customDateActive = ref(false),
-      iscontentLoad = ref(false), // Loading
+      iscontentLoad = ref(true), // Loading
       notification = ref({
         visible: false,
         message: "",
@@ -202,18 +209,21 @@ export default {
       W = ref({}), // Chart
       S = ref([]),
       A = ref("Environment"),
+      initialDate = ref(""),
       lastUpdate = ref(""),
       isMobile = ref(false),
       customDate = ref("");
 
-    let sensorDataGrupDummy = {
-      "1h": generateSensorData(1, 5, 10),
-      "3h": generateSensorData(3, 10, 30),
-      "12h": generateSensorData(12, 15, 60),
-      "1d": generateSensorData(24, 20, 120),
-      "1w": generateSensorData(7 * 24, 30, 4 * 60),
-      "1m": generateSensorData(30 * 24, 40, 24 * 60),
-    };
+    let url2 = "",
+      sensorDataGrup = {
+        "1h": [],
+        "3h": [],
+        "12h": [],
+        "1d": [],
+        "1w": [],
+        "1m": [],
+      },
+      sensorDataGrupSummary = [];
 
     const menuList = [
         { id: 1, title: "Value Setting", route: { name: "value-setting-fp" }, icon: "value-setting.svg" },
@@ -226,6 +236,9 @@ export default {
         { name: "Water Level Low", satuan: "", value: "OFF", isGreaterThan: false, isLowerThan: false },
         { name: "Water Level Mid", satuan: "", value: "OFF", isGreaterThan: false, isLowerThan: false },
         { name: "Water Level High", satuan: "", value: "OFF", isGreaterThan: false, isLowerThan: false },
+        { name: "Temp", satuan: "°C", value: null, isGreaterThan: ".", isLowerThan: "" },
+        { name: "RH", satuan: "%", value: null, isGreaterThan: ".", isLowerThan: "" },
+        { name: "CO2", satuan: "ppm", value: null, isGreaterThan: ".", isLowerThan: "" },
       ]),
       env_date_filter = ref([
         { name: "1h", value: "1h" },
@@ -236,66 +249,150 @@ export default {
         { name: "1m", value: "1m" },
       ]),
       envSummResult = ref([
-        { name: "WL_Low", value: null },
-        { name: "WL_Mid", value: null },
-        { name: "WL_High", value: null },
+        { name: "Temp", value: null },
+        { name: "RH", value: null },
+        { name: "CO2", value: null },
       ]),
       envSumm = ref([
-        { name: "Max", value: "Max", wl_low: 100, wl_mid: 100, wl_hig: 100 },
-        { name: "Min", value: "Min", wl_low: 100, wl_mid: 100, wl_hig: 100 },
-        { name: "Avg", value: "Avg", wl_low: 100, wl_mid: 100, wl_hig: 100 },
-        { name: "Day", value: "Day", wl_low: 100, wl_mid: 100, wl_hig: 100 },
+        { name: "Max", value: "Max", temp: 100, hum: null, co2: null },
+        { name: "Min", value: "Min", temp: null, hum: null, co2: null },
+        { name: "Avg", value: "Avg", temp: null, hum: null, co2: null },
+        { name: "Day", value: "Day", temp: null, hum: null, co2: null },
       ]);
 
     const dateUpdate = computed(() => {
-      if (p.value === null) return "";
-      const now = new Date(),
-        customDateObj = new Date(customDate.value);
-      let pastDate;
+        if (p.value === null) return "";
+        const now = new Date(),
+          customDateObj = new Date(customDate.value);
+        let pastDate;
 
-      const baseDate = customDateActive.value ? customDateObj : now;
+        const baseDate = customDateActive.value ? customDateObj : now;
 
-      switch (env_date_filter.value[p.value].value) {
-        case "1h":
-        case "3h":
-        case "12h":
-          pastDate = new Date(baseDate.getTime());
-          break;
-        case "1d":
-          pastDate = new Date(baseDate.getTime() - 1 * 24 * 60 * 60 * 1000);
-          return `${formatDate(pastDate)} - ${formatDate(baseDate)}`;
-        case "1w":
-          pastDate = new Date(baseDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return `${formatDate(pastDate)} - ${formatDate(baseDate)}`;
-        case "1m":
-          pastDate = new Date(baseDate.getFullYear(), baseDate.getMonth() - 1, baseDate.getDate());
-          return `${formatDate(pastDate)} - ${formatDate(baseDate)}`;
-        default:
-          return "";
-      }
-      return formatDate(pastDate);
-    });
+        switch (env_date_filter.value[p.value].value) {
+          case "1h":
+          case "3h":
+          case "12h":
+            pastDate = new Date(baseDate.getTime());
+            break;
+          case "1d":
+            pastDate = new Date(baseDate.getTime() - 1 * 24 * 60 * 60 * 1000);
+            return `${formatDate(pastDate)} - ${formatDate(baseDate)}`;
+          case "1w":
+            pastDate = new Date(baseDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return `${formatDate(pastDate)} - ${formatDate(baseDate)}`;
+          case "1m":
+            pastDate = new Date(baseDate.getFullYear(), baseDate.getMonth() - 1, baseDate.getDate());
+            return `${formatDate(pastDate)} - ${formatDate(baseDate)}`;
+          default:
+            return "";
+        }
+        return formatDate(pastDate);
+      }),
+      getMobileLabel = (name) => {
+        const mobileLabels = {
+          "Temp(1)": "Tem1",
+          "RH(1)": "RH1",
+          "Temp(2)": "Tem2",
+          "RH(2)": "RH2",
+          "Temp(3)": "Tem3",
+          "RH(3)": "RH3",
+          "Temp(All)": "Tem",
+          "RH(All)": "RH",
+        };
+        return mobileLabels[name] || name;
+      };
 
-    const updateChart = (data) => {
+    const updateChart = (groupedData, date, custom = false) => {
         S.value = [];
-        const val = [
-          { name: "WL_Low", data: [] },
-          { name: "WL_Mid", data: [] },
-          { name: "WL_High", data: [] },
-        ];
-        data.forEach((item) => {
-          const time = new Date(item.created_at).getTime();
-          const timeUTCPlus7 = time + 7 * 60 * 60 * 1000;
 
-          if (item.wl_low !== null) {
-            val[0].data.push({ x: timeUTCPlus7, y: parseFloat(item.wl_low) });
-          }
-          if (item.wl_mid !== null) {
-            val[1].data.push({ x: timeUTCPlus7, y: parseFloat(item.wl_mid) });
-          }
-          if (item.wl_hig !== null) {
-            val[2].data.push({ x: timeUTCPlus7, y: parseFloat(item.wl_hig) });
-          }
+        const val = [
+          { name: "Temp", data: [] },
+          { name: "RH", data: [] },
+          { name: "CO2", data: [] },
+          { name: " ", data: [] },
+        ];
+
+        let nowUpdate;
+        if (custom) {
+          nowUpdate = new Date(customDate.value);
+        } else {
+          nowUpdate = new Date();
+        }
+        const nowplus7 = new Date(nowUpdate.getTime() + 7 * 60 * 60 * 1000);
+        nowplus7.setSeconds(0, 0);
+        const nowplus7fit = new Date(nowplus7.getTime() - 2 * 60 * 1000);
+
+        const oneHourAgo = new Date(nowplus7);
+        oneHourAgo.setHours(nowplus7.getHours() - 1);
+
+        const threeHoursAgo = new Date(nowplus7);
+        threeHoursAgo.setHours(nowplus7.getHours() - 3);
+
+        const twelveHoursAgo = new Date(nowplus7);
+        twelveHoursAgo.setHours(nowplus7.getHours() - 12);
+
+        const yesterday = new Date(nowplus7);
+        yesterday.setDate(nowplus7.getDate() - 1);
+
+        const oneWeekAgo = new Date(nowplus7);
+        oneWeekAgo.setDate(nowplus7.getDate() - 7);
+
+        const oneMonthAgo = new Date(nowplus7);
+        oneMonthAgo.setMonth(nowplus7.getMonth() - 1);
+
+        if (date === "1h") {
+          val[3].data.push({ x: nowplus7fit, y: parseFloat("") });
+          val[3].data.push({ x: oneHourAgo, y: parseFloat("") });
+        } else if (date === "3h") {
+          val[3].data.push({ x: nowplus7fit, y: parseFloat("") });
+          val[3].data.push({ x: threeHoursAgo, y: parseFloat("") });
+        } else if (date === "12h") {
+          val[3].data.push({ x: nowplus7fit, y: parseFloat("") });
+          val[3].data.push({ x: twelveHoursAgo, y: parseFloat("") });
+        } else if (date === "1d") {
+          val[3].data.push({ x: nowplus7fit, y: parseFloat("") });
+          val[3].data.push({ x: yesterday, y: parseFloat("") });
+        } else if (date === "1w") {
+          val[3].data.push({ x: nowplus7fit, y: parseFloat("") });
+          val[3].data.push({ x: oneWeekAgo, y: parseFloat("") });
+        } else if (date === "1m") {
+          val[3].data.push({ x: nowplus7fit, y: parseFloat("") });
+          val[3].data.push({ x: oneMonthAgo, y: parseFloat("") });
+        }
+
+        const uniqueTimeSet = new Set();
+
+        groupedData.forEach((group) => {
+          group.forEach((item) => {
+            const time = new Date(item.created_at).getTime();
+            const timeUTCPlus7 = time + 7 * 60 * 60 * 1000;
+
+            const adjustedTime = new Date(timeUTCPlus7);
+            const minutes = adjustedTime.getMinutes();
+            if (date === "1m") {
+              adjustedTime.setMinutes(Math.floor(minutes / 60) * 60, 0, 0);
+            } else if (date === "1w") {
+              adjustedTime.setMinutes(Math.floor(minutes / 10) * 60, 0, 0);
+            } else {
+              adjustedTime.setMinutes(Math.floor(minutes / 1) * 1, 0, 0);
+            }
+
+            const timeKey = adjustedTime.toISOString().slice(0, 16);
+
+            if (!uniqueTimeSet.has(timeKey)) {
+              uniqueTimeSet.add(timeKey);
+
+              if (item.temp !== null) {
+                val[0].data.push({ x: adjustedTime.getTime(), y: parseFloat(item.temp) });
+              }
+              if (item.hum !== null) {
+                val[1].data.push({ x: adjustedTime.getTime(), y: parseFloat(item.hum) });
+              }
+              if (item.co2 !== null) {
+                val[2].data.push({ x: adjustedTime.getTime(), y: parseFloat(item.co2) });
+              }
+            }
+          });
         });
         S.value = val;
       },
@@ -305,10 +402,13 @@ export default {
       handleDateFilterClick = (value, index) => {
         p.value = index;
         x.value = value;
-        if (value === "custom") {
+
+        if (customDateActive.value === false) {
+          updateChart(sensorDataGrup[value], value);
         } else {
-          updateChart(sensorDataGrupDummy[x.value]);
+          updateChart(sensorDataGrup[value], value, true);
         }
+        updateSummaries(sensorDataGrupSummary, value);
       },
       chartOptions = ref({
         chart: {
@@ -332,6 +432,7 @@ export default {
             format: "dd MMM yyyy HH:mm",
           },
         },
+        colors: ["#3357FF", "#33FF57", "#ffc233", "#FFFFFF"],
       });
 
     const getIconPath = (name) => {
@@ -362,11 +463,28 @@ export default {
         const hours = String(date.getHours()).padStart(2, "0");
         const minutes = String(date.getMinutes()).padStart(2, "0");
         return `${year}-${month}-${day}T${hours}:${minutes}`;
+      },
+      formatDateToDDMMYYYY = (dateString) => {
+        const date = new Date(dateString);
+        const day = date.getDate();
+        return `${day}`;
+      },
+      handleDateChange = (newDate, oldDate) => {
+        // console.log(`Date changed from ${oldDate} to ${newDate}`);
+        updateUrl(true);
+        onSyncCustom("1h", true);
+        p.value = 0;
+        x.value = "1h";
       };
 
     function toggleCustomDate() {
       customDateActive.value = !customDateActive.value;
-      if (customDateActive.value === true) {
+      if (customDateActive.value === false) {
+        updateUrl();
+        onSyncCustom("1h");
+        p.value = 0;
+        x.value = "1h";
+      } else {
         placeHolderdate();
       }
     }
@@ -374,56 +492,29 @@ export default {
       const now = new Date();
       const formattedNow = formatDateTime(now);
       customDate.value = formattedNow;
-    }
-    function generateSensorData(totalHours, dataCount, intervalMinutes) {
-      const data = [];
-      const now = new Date();
-
-      for (let i = 0; i < dataCount; i++) {
-        const createdAt = new Date(now.getTime() - i * intervalMinutes * 60 * 1000).toISOString();
-        data.push({
-          wl_low: (80 + Math.floor(Math.random() * 10)).toString(),
-          wl_mid: (40 + Math.floor(Math.random() * 20)).toString(),
-          wl_hig: (75 + Math.floor(Math.random() * 15)).toString(),
-          created_at: createdAt,
-        });
-      }
-
-      return data;
+      initialDate.value = formattedNow;
     }
 
-    async function getDatasetpoint(retries = 3, delay = 1000) {
-      try {
-        const response = await fetch(url2);
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        const data = await response.json();
-        const percentValueTemp = (parseInt(data.advice.tempTh) * parseInt(data.advice.tempTol)) / 100;
-        const percentValueHum = (parseInt(data.advice.humTh) * parseInt(data.advice.humTol)) / 100;
-        templimitup = parseInt(data.advice.tempTh) + percentValueTemp;
-        templimitdown = parseInt(data.advice.tempTh) - percentValueTemp;
-        humlimitup = parseInt(data.advice.humTh) + percentValueHum;
-        humlimitdown = parseInt(data.advice.humTh) - percentValueHum;
-      } catch (error) {
-        if (retries > 0) {
-          notification.value = {
-            visible: true,
-            message: `Retrying getDatasetpoint... (${retries} retries left)`,
-            success: false,
-            loading: true,
-          };
-          await new Promise((res) => setTimeout(res, delay));
-          return getDatasetpoint(retries - 1, delay * 5); // Increase delay for next retry
-        } else {
-          notification.value = {
-            visible: true,
-            message: "There was a problem with the fetch setpoint:" + error.message,
-            success: false,
-            loading: false,
-          };
-        }
+    function updateUrl(useCustomDate = false) {
+      let selectedDate;
+      if (useCustomDate && customDate.value) {
+        selectedDate = new Date(customDate.value);
+      } else {
+        selectedDate = new Date();
       }
+      const end1 = new Date(selectedDate.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 19);
+
+      const lastMonth = new Date(selectedDate.setMonth(selectedDate.getMonth() - 1)),
+        start1 = new Date(lastMonth.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 19),
+        start2 = new Date(lastMonth.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 19);
+
+      if (useCustomDate) {
+        url2 = `https://inamas.id/dev/faperta/?getdata&start=${start1}&end=${end1}&limit=0&short=DESC`;
+      } else {
+        url2 = `https://inamas.id/dev/faperta/?getdata&start=${start2}&end=${end1}&limit=0&short=DESC`;
+      }
+
+      console.log("link", url2);
     }
 
     async function getDataEnvi(retries = 3, delay = 1000) {
@@ -433,8 +524,10 @@ export default {
           throw new Error("Network response was not ok");
         }
         const data = await response.json();
-        const advice = data.advice;
-        updateEnvironmentData(advice);
+        const advicewaterlevel = data.advice.waterlevel;
+        const adviceenvicor = data.advice.envicor;
+        updateEnvironmentData(advicewaterlevel);
+        updateEnvicorData(adviceenvicor);
         lastUpdate.value = new Date().toLocaleString();
       } catch (error) {
         if (retries > 0) {
@@ -455,6 +548,12 @@ export default {
           };
         }
       }
+    }
+
+    async function updateEnvicorData(advice) {
+      environtment.value[3].value = parseFloat(advice.temp);
+      environtment.value[4].value = parseFloat(advice.hum);
+      environtment.value[5].value = parseFloat(advice.co2);
     }
 
     const updateEnvironmentData = (advice) => {
@@ -483,36 +582,197 @@ export default {
       }
     };
 
+    async function getDataSummary(value1, custom = false) {
+      fetch(url2)
+        .then((response) => response.json())
+        .then((data) => {
+          sensorDataGrup["1h"] = groupSensorDataByTimeframe(data.advice.envicor, "1h", custom);
+          sensorDataGrup["3h"] = groupSensorDataByTimeframe(data.advice.envicor, "3h", custom);
+          sensorDataGrup["12h"] = groupSensorDataByTimeframe(data.advice.envicor, "12h", custom);
+          sensorDataGrup["1d"] = groupSensorDataByTimeframe(data.advice.envicor, "1d", custom);
+          sensorDataGrup["1w"] = groupSensorDataByTimeframe(data.advice.envicor, "1w", custom);
+          sensorDataGrup["1m"] = groupSensorDataByTimeframe(data.advice.envicor, "1m", custom);
+
+          updateChart(sensorDataGrup[value1], value1, custom);
+
+          const newSensorDataGrup = restructureSensorData(sensorDataGrup);
+          sensorDataGrupSummary = newSensorDataGrup;
+
+          updateSummaries(sensorDataGrupSummary, value1);
+
+          iscontentLoad.value = false;
+          notification.value = {
+            visible: true,
+            message: "Berhasil menerima data",
+            success: true,
+            loading: false,
+          };
+          setTimeout(() => {
+            notification.value.visible = false;
+          }, 2000);
+        })
+        .catch((error) => {
+          notification.value = {
+            visible: true,
+            message: "Error fetching data:" + error.message,
+            success: false,
+            loading: false,
+          };
+        });
+    }
+
+    function updateSummaries(sensorDataGrup, group) {
+      envSumm.value.forEach((summary) => {
+        const sensors = ["temp", "hum", "co2"];
+
+        sensors.forEach((sensor) => {
+          const data = sensorDataGrup[group].map((d) => parseFloat(d[sensor]));
+
+          if (summary.name === "Max") {
+            const maxVal = data.reduce((max, val) => (val > max ? val : max), -Infinity);
+            summary[sensor] = formatNumberWithK(maxVal);
+          } else if (summary.name === "Min") {
+            summary[sensor] = data.reduce((min, val) => (val < min ? val : min), Infinity).toFixed(1);
+          } else if (summary.name === "Avg") {
+            const avg = data.reduce((acc, val) => acc + val, 0) / data.length;
+            summary[sensor] = formatNumberWithK(avg);
+          } else if (summary.name === "Day") {
+            const lastReadingTime = new Date();
+            const formattedDate = formatDateToDDMMYYYY(lastReadingTime);
+            summary[sensor] = formattedDate;
+          }
+        });
+      });
+    }
+
+    function formatNumberWithK(num) {
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + "M";
+      } else if (num >= 1000) {
+        return (num / 1000).toFixed(num >= 10000 ? 0 : 1) + "k";
+      }
+      return num.toFixed(1);
+    }
+
+    function groupSensorDataByTimeframe(data, interval, custom = false) {
+      const groupedData = [];
+
+      let currentTime;
+      if (custom) {
+        currentTime = new Date(customDate.value).getTime();
+      } else {
+        currentTime = new Date().getTime();
+      }
+
+      let intervalMs;
+
+      switch (
+        interval // in millisecond
+      ) {
+        case "1h":
+          intervalMs = 60 * 60 * 1000;
+          break;
+        case "3h":
+          intervalMs = 3 * 60 * 60 * 1000;
+          break;
+        case "12h":
+          intervalMs = 12 * 60 * 60 * 1000;
+          break;
+        case "1d":
+          intervalMs = 24 * 60 * 60 * 1000;
+          break;
+        case "1w":
+          intervalMs = 7 * 24 * 60 * 60 * 1000;
+          break;
+        case "1m":
+          intervalMs = 30 * 24 * 60 * 60 * 1000;
+          break;
+        default:
+          intervalMs = 60 * 60 * 1000;
+      }
+
+      let tempData = [];
+
+      data.forEach((item) => {
+        const time = new Date(item.created_at).getTime();
+        const parsedItem = {
+          ...item,
+          temp: parseFloat(item.temp),
+          hum: parseFloat(item.hum),
+          co2: parseFloat(item.co2),
+        };
+
+        if (currentTime - time <= intervalMs) {
+          tempData.push(parsedItem);
+        } else if (tempData.length) {
+          groupedData.push(tempData);
+          tempData = [];
+        }
+      });
+
+      if (tempData.length) {
+        groupedData.push(tempData);
+      }
+
+      return groupedData;
+    }
+
+    function restructureSensorData(sensorDataGrup) {
+      const newSensorDataGrup = {};
+
+      for (const timeframe in sensorDataGrup) {
+        newSensorDataGrup[timeframe] = sensorDataGrup[timeframe].length > 0 ? sensorDataGrup[timeframe][0] : [];
+      }
+
+      return newSensorDataGrup;
+    }
+
     const checkScreenSize = () => {
       isMobile.value = window.innerWidth <= 768; // Set true if width is <= 768px
     };
 
     async function onSyncClick() {
       iscontentLoad.value = true;
-      updateChart(sensorDataGrupDummy["1h"]);
-      setInterval(() => {
-        iscontentLoad.value = false;
-      }, 1000);
+      sensorDataGrup = {
+        "1h": [],
+        "3h": [],
+        "12h": [],
+        "1d": [],
+        "1w": [],
+        "1m": [],
+      };
+      updateUrl();
+      p.value = 0;
+      x.value = "1h";
+      customDateActive.value = false;
+      getDataSummary("1h");
     }
 
-    async function updateDataenvi() {
-      await getDatasetpoint();
-      getDataEnvi();
-      lastUpdate.value = new Date().toLocaleString();
+    async function onSyncCustom(value1, useCustom = false) {
+      iscontentLoad.value = true;
+      sensorDataGrup = {
+        "1h": [],
+        "3h": [],
+        "12h": [],
+        "1d": [],
+        "1w": [],
+        "1m": [],
+      };
+      getDataSummary(value1, useCustom, true);
     }
 
     onMounted(() => {
+      updateUrl();
       checkScreenSize(); // Initial check
       window.addEventListener("resize", checkScreenSize); // Listen to window resize
-
       notification.value = {
         visible: true,
         message: "Fetching data...",
         success: false,
         loading: true,
       };
-      updateChart(sensorDataGrupDummy["1h"]);
       getDataEnvi();
+      getDataSummary("1h");
       notification.value = {
         visible: true,
         message: "Berhasil menerima data",
@@ -529,6 +789,12 @@ export default {
 
     onUnmounted(() => {
       window.removeEventListener("resize", checkScreenSize);
+    });
+
+    watch(customDate, (newValue, oldValue) => {
+      if (newValue !== initialDate.value && customDateActive.value === true) {
+        handleDateChange(newValue, oldValue);
+      }
     });
 
     return {
@@ -554,7 +820,6 @@ export default {
       notification,
       envSummResult,
       iscontentLoad,
-      updateDataenvi,
       env_date_filter,
       customDateActive,
       toggleCustomDate,

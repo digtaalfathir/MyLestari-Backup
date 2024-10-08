@@ -469,10 +469,9 @@ export default {
     HeaderBack,
   },
   setup() {
-    const url = "https://inamas.id/dev/isolated/faperta/?actuator",
-      url2 = "https://inamas.id/dev/isolated/faperta/?watering_time",
-      url3 = "https://inamas.id/dev/isolated/faperta/?growlight_time",
-      router = useRouter(),
+    const url = "https://inamas.id/dev/faperta/?actuator",
+      url2 = "https://inamas.id/dev/faperta/?watering_time ",
+      url3 = "https://inamas.id/dev/faperta/?growlight_time",
       lastUpdate = ref(""),
       isMobile = ref(false),
       pendingChanges = ref([]),

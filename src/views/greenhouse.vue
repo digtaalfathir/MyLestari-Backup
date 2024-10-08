@@ -272,7 +272,7 @@ export default {
         { name: "Day", value: "Day", ec: null, temp: null, ph: null, do: null },
       ]),
       nutrient = ref([
-        { name: "EC", satuan: "μS", value: null, isGreaterThan: "", isLowerThan: "" },
+        { name: "EC", satuan: "ppm", value: null, isGreaterThan: "", isLowerThan: "" },
         { name: "pH", satuan: "", value: null, isGreaterThan: "", isLowerThan: "" },
         { name: "DO", satuan: "mg/L", value: null, isGreaterThan: "", isLowerThan: "" },
         { name: "Temp", satuan: "°C", value: null, isGreaterThan: "", isLowerThan: "" },
@@ -382,6 +382,7 @@ export default {
         }
         const nowplus7 = new Date(nowUpdate.getTime() + 7 * 60 * 60 * 1000);
         nowplus7.setSeconds(0, 0);
+        const nowplus7fit = new Date(nowplus7.getTime() - 2 * 60 * 1000);
 
         const oneHourAgo = new Date(nowplus7);
         oneHourAgo.setHours(nowplus7.getHours() - 1);
@@ -401,28 +402,26 @@ export default {
         const oneMonthAgo = new Date(nowplus7);
         oneMonthAgo.setMonth(nowplus7.getMonth() - 1);
 
-        // Add sample points for different time intervals
         if (date === "1h") {
-          val[4].data.push({ x: nowplus7, y: parseFloat("") });
+          val[4].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[4].data.push({ x: oneHourAgo, y: parseFloat("") });
         } else if (date === "3h") {
-          val[4].data.push({ x: nowplus7, y: parseFloat("") });
+          val[4].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[4].data.push({ x: threeHoursAgo, y: parseFloat("") });
         } else if (date === "12h") {
-          val[4].data.push({ x: nowplus7, y: parseFloat("") });
+          val[4].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[4].data.push({ x: twelveHoursAgo, y: parseFloat("") });
         } else if (date === "1d") {
-          val[4].data.push({ x: nowplus7, y: parseFloat("") });
+          val[4].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[4].data.push({ x: yesterday, y: parseFloat("") });
         } else if (date === "1w") {
-          val[4].data.push({ x: nowplus7, y: parseFloat("") });
+          val[4].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[4].data.push({ x: oneWeekAgo, y: parseFloat("") });
         } else if (date === "1m") {
-          val[4].data.push({ x: nowplus7, y: parseFloat("") });
+          val[4].data.push({ x: nowplus7fit, y: parseFloat("") });
           val[4].data.push({ x: oneMonthAgo, y: parseFloat("") });
         }
 
-        // Set to track unique timestamps per minute
         const uniqueTimeSet = new Set();
 
         groupedData.forEach((group) => {
@@ -516,12 +515,12 @@ export default {
           throw new Error("Network response was not ok");
         }
         const data = await response.json();
-        const percentValueEc = parseInt(data.advice.ecTol);
-        const percentValuepH = parseInt(data.advice.phTol);
-        eclimitup = parseInt(data.advice.ecTh) + percentValueEc;
-        eclimitdown = parseInt(data.advice.ecTh) - percentValueEc;
-        phlimitup = parseInt(data.advice.phTh) + percentValuepH;
-        phlimitdown = parseInt(data.advice.phTh) - percentValuepH;
+        const percentValueEc = parseFloat(data.advice.ecTol);
+        const percentValuepH = parseFloat(data.advice.phTol);
+        eclimitup = parseFloat(data.advice.ecTh) + percentValueEc;
+        eclimitdown = parseFloat(data.advice.ecTh) - percentValueEc;
+        phlimitup = parseFloat(data.advice.phTh) + percentValuepH;
+        phlimitdown = parseFloat(data.advice.phTh) - percentValuepH;
       } catch (error) {
         if (retries > 0) {
           await new Promise((res) => setTimeout(res, delay));
@@ -668,34 +667,36 @@ export default {
 
       let currentTime;
       if (custom) {
-        currentTime = new Date(customDate.value).getTime(); // Jika custom = true, gunakan customDate
+        currentTime = new Date(customDate.value).getTime();
       } else {
-        currentTime = new Date().getTime(); // Jika custom = false, gunakan waktu saat ini
+        currentTime = new Date().getTime();
       }
 
       let intervalMs;
 
-      switch (interval) {
+      switch (
+        interval // in millisecond
+      ) {
         case "1h":
-          intervalMs = 60 * 60 * 1000; // 1 hour in milliseconds
+          intervalMs = 60 * 60 * 1000;
           break;
         case "3h":
-          intervalMs = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+          intervalMs = 3 * 60 * 60 * 1000;
           break;
         case "12h":
-          intervalMs = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+          intervalMs = 12 * 60 * 60 * 1000;
           break;
         case "1d":
-          intervalMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+          intervalMs = 24 * 60 * 60 * 1000;
           break;
         case "1w":
-          intervalMs = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
+          intervalMs = 7 * 24 * 60 * 60 * 1000;
           break;
         case "1m":
-          intervalMs = 30 * 24 * 60 * 60 * 1000; // 1 month in milliseconds
+          intervalMs = 30 * 24 * 60 * 60 * 1000;
           break;
         default:
-          intervalMs = 60 * 60 * 1000; // Default to 1 hour
+          intervalMs = 60 * 60 * 1000;
       }
 
       let tempData = [];
@@ -739,6 +740,10 @@ export default {
         "1w": [],
         "1m": [],
       };
+      updateUrl();
+      p.value = 0;
+      x.value = "1h";
+      customDateActive.value = false;
       getDataSummary("1h");
     }
 
