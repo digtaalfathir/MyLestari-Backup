@@ -1,4 +1,4 @@
-# my---lestari
+# My-Lestari
 
 ## Project setup
 
